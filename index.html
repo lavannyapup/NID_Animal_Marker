@@ -11,17 +11,18 @@
     <a-scene
       vr-mode-ui="enabled: false;"
       loading-screen="enabled: false;"
-      arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+      arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; detectionMode: mono; matrixCodeType: 3x3;"
       id="scene"
       embedded
       gesture-detector
+      renderer="logarithmicDepthBuffer: true;"
     >
       <!-- Preload your sound -->
       <a-assets>
         <audio id="purr-sound" src="assets/purr.mp3" preload="auto"></audio>
       </a-assets>
 
-      <!-- Marker -->
+      <!-- Marker with smoothing -->
       <a-marker
         id="animated-marker"
         type="pattern"
@@ -30,6 +31,10 @@
         raycaster="objects: .clickable"
         emitevents="true"
         cursor="fuse: false; rayOrigin: mouse;"
+        smooth="true"
+        smoothCount="10"
+        smoothTolerance="0.01"
+        smoothThreshold="5"
       >
         <!-- Clickable image -->
         <a-image
@@ -56,7 +61,7 @@
         sound.play().catch(err => console.warn("Audio play blocked:", err));
       });
 
-      // Optional: stop sound if marker is lost
+      // Stop sound if marker is lost
       marker.addEventListener("markerLost", () => {
         sound.pause();
         sound.currentTime = 0;
@@ -64,4 +69,5 @@
     </script>
   </body>
 </html>
+
 
