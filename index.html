@@ -1,47 +1,28 @@
 <!doctype html>
 <html>
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Campus Cats AR</title>
-
-    <!-- A-Frame + AR.js -->
     <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
     <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
-
-    <!-- TensorFlow.js + Teachable Machine -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
-
-    <style>
-      body { margin:0; overflow:hidden; }
-      #status {
-        position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
-        background: rgba(0,0,0,0.6); color:#fff; padding:6px 10px;
-        border-radius: 6px; font-size:14px; z-index:10000;
-      }
-    </style>
   </head>
 
-  <body>
-    <div id="status">Loading classifier…</div>
-
-    <!-- AR.js Scene -->
+  <body style="margin: 0; overflow: hidden;">
     <a-scene
-      embedded
-      vr-mode-ui="enabled: false"
-      loading-screen="enabled: false"
+      vr-mode-ui="enabled: false;"
+      loading-screen="enabled: false;"
       arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; detectionMode: mono; matrixCodeType: 3x3;"
-      renderer="logarithmicDepthBuffer: true;"
+      id="scene"
+      embedded
       gesture-detector
+      renderer="logarithmicDepthBuffer: true;"
     >
+      <!-- Preload your sound -->
       <a-assets>
         <audio id="purr-sound" src="assets/purr.mp3" preload="auto"></audio>
       </a-assets>
 
-      <!-- Marker -->
+      <!-- Marker with smoothing -->
       <a-marker
         id="animated-marker"
         type="pattern"
@@ -55,6 +36,7 @@
         smoothTolerance="0.01"
         smoothThreshold="5"
       >
+        <!-- Clickable image -->
         <a-image
           id="cat"
           src="assets/asset.png"
@@ -69,63 +51,21 @@
     </a-scene>
 
     <script>
-      /* ====== Sound on tap (marker mode) ====== */
       const cat = document.querySelector("#cat");
       const sound = document.querySelector("#purr-sound");
       const marker = document.querySelector("#animated-marker");
 
+      // Play sound on tap
       cat.addEventListener("click", () => {
-        if (!sound.paused) sound.currentTime = 0;
+        if (!sound.paused) sound.currentTime = 0; // restart if already playing
         sound.play().catch(err => console.warn("Audio play blocked:", err));
       });
 
+      // Stop sound if marker is lost
       marker.addEventListener("markerLost", () => {
         sound.pause();
         sound.currentTime = 0;
       });
-
-      /* ====== Teachable Machine Classifier ====== */
-      const URL = "https://teachablemachine.withgoogle.com/models/MUNVRRsGG/";
-      let model, webcam, labelContainer, maxPredictions;
-
-      async function initClassifier() {
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
-
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
-
-        // Larger webcam resolution → less blurry
-        webcam = new tmImage.Webcam(400, 300, true); // width, height, flip
-        await webcam.setup({ facingMode: "environment" }); // back camera on phones
-        await webcam.play();
-        window.requestAnimationFrame(loop);
-
-        document.getElementById("status").innerText = "Classifier ready (point at Sneezy)";
-      }
-
-      async function loop() {
-        webcam.update();
-        await predict();
-        window.requestAnimationFrame(loop);
-      }
-
-      async function predict() {
-        const prediction = await model.predict(webcam.canvas);
-
-        // find top class
-        const top = prediction.reduce((a, b) =>
-          a.probability > b.probability ? a : b
-        );
-
-        if (top.className === "Sneezy" && top.probability > 0.85) {
-          document.getElementById("status").innerText = "Detected Sneezy 🐾";
-          // Show cat AR image (even without marker)
-          cat.setAttribute("visible", "true");
-        }
-      }
-
-      initClassifier();
     </script>
   </body>
 </html>
