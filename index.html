@@ -22,7 +22,7 @@
         <audio id="purr-sound" src="assets/purr.mp3" preload="auto"></audio>
       </a-assets>
 
-      <!-- Marker with smoothing -->
+      <!-- Marker with smoothing + glow -->
       <a-marker
         id="animated-marker"
         type="pattern"
@@ -36,7 +36,19 @@
         smoothTolerance="0.01"
         smoothThreshold="5"
       >
-        <!-- Clickable image -->
+
+        <!-- Pulsing glow circle -->
+        <a-circle
+          id="glow"
+          radius="1"
+          position="0 0 0"
+          rotation="-90 0 0"
+          material="color: yellow; opacity: 0.4; transparent: true; shader: flat;"
+          animation__scale="property: scale; dir: alternate; dur: 1200; easing: easeInOutSine; loop: true; to: 1.3 1.3 1"
+          animation__fade="property: material.opacity; dir: alternate; dur: 1200; easing: easeInOutSine; loop: true; to: 0.7"
+        ></a-circle>
+
+        <!-- Clickable cat image -->
         <a-image
           id="cat"
           src="assets/asset.png"
@@ -69,5 +81,3 @@
     </script>
   </body>
 </html>
-
-
