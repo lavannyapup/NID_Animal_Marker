@@ -16,32 +16,20 @@
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
 
     <style>
-      body { margin:0; overflow:hidden; font-family: sans-serif; }
-
-      /* Mode toggle */
-      #mode-toggle {
+      body { margin:0; overflow:hidden; }
+      #status {
         position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
-        background: #3b82f6; color:#fff; padding:10px 18px; border:none;
-        border-radius: 6px; font-size:15px; cursor:pointer; z-index: 10000;
+        background: rgba(0,0,0,0.6); color:#fff; padding:6px 10px;
+        border-radius: 6px; font-size:14px; z-index:10000;
       }
-
-      /* Classifier UI */
-      #classifier-ui {
-        display: none; text-align:center; padding:10px;
-        background: rgba(0,0,0,0.6); color:#fff;
-        position: fixed; bottom:10px; left:50%; transform: translateX(-50%);
-        border-radius: 8px; font-size:14px; z-index: 10000;
-      }
-      #webcam-container { display:none; }
     </style>
   </head>
 
   <body>
-    <button id="mode-toggle">Switch to Classifier Mode</button>
+    <div id="status">Loading classifier…</div>
 
-    <!-- Marker Mode -->
+    <!-- AR.js Scene -->
     <a-scene
-      id="ar-scene"
       embedded
       vr-mode-ui="enabled: false"
       loading-screen="enabled: false"
@@ -53,6 +41,7 @@
         <audio id="purr-sound" src="assets/purr.mp3" preload="auto"></audio>
       </a-assets>
 
+      <!-- Marker -->
       <a-marker
         id="animated-marker"
         type="pattern"
@@ -79,15 +68,8 @@
       <a-entity camera></a-entity>
     </a-scene>
 
-    <!-- Classifier Mode -->
-    <div id="classifier-ui">
-      <div><b>Classifier Mode Active</b></div>
-      <div id="label-container"></div>
-    </div>
-    <div id="webcam-container"></div>
-
     <script>
-      /* ========= Marker Mode (with sound) ========= */
+      /* ====== Sound on tap (marker mode) ====== */
       const cat = document.querySelector("#cat");
       const sound = document.querySelector("#purr-sound");
       const marker = document.querySelector("#animated-marker");
@@ -102,7 +84,7 @@
         sound.currentTime = 0;
       });
 
-      /* ========= Classifier Mode ========= */
+      /* ====== Teachable Machine Classifier ====== */
       const URL = "https://teachablemachine.withgoogle.com/models/MUNVRRsGG/";
       let model, webcam, labelContainer, maxPredictions;
 
@@ -113,73 +95,37 @@
         model = await tmImage.load(modelURL, metadataURL);
         maxPredictions = model.getTotalClasses();
 
-        webcam = new tmImage.Webcam(200, 200, true); // width, height, flip
-        await webcam.setup();
+        // Larger webcam resolution → less blurry
+        webcam = new tmImage.Webcam(400, 300, true); // width, height, flip
+        await webcam.setup({ facingMode: "environment" }); // back camera on phones
         await webcam.play();
         window.requestAnimationFrame(loop);
 
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
-        labelContainer = document.getElementById("label-container");
-        labelContainer.innerHTML = "";
-        for (let i = 0; i < maxPredictions; i++) {
-          labelContainer.appendChild(document.createElement("div"));
-        }
+        document.getElementById("status").innerText = "Classifier ready (point at Sneezy)";
       }
 
       async function loop() {
-        if (webcam) {
-          webcam.update();
-          await predict();
-          window.requestAnimationFrame(loop);
-        }
+        webcam.update();
+        await predict();
+        window.requestAnimationFrame(loop);
       }
 
       async function predict() {
         const prediction = await model.predict(webcam.canvas);
-        prediction.forEach((p, i) => {
-          labelContainer.childNodes[i].innerHTML =
-            `${p.className}: ${p.probability.toFixed(2)}`;
-        });
 
-        // Example: show top prediction in console
+        // find top class
         const top = prediction.reduce((a, b) =>
           a.probability > b.probability ? a : b
         );
-        if (top.probability > 0.8) {
-          console.log("Detected:", top.className);
+
+        if (top.className === "Sneezy" && top.probability > 0.85) {
+          document.getElementById("status").innerText = "Detected Sneezy 🐾";
+          // Show cat AR image (even without marker)
+          cat.setAttribute("visible", "true");
         }
       }
 
-      /* ========= Mode Toggle ========= */
-      const toggleBtn = document.getElementById("mode-toggle");
-      const arScene = document.getElementById("ar-scene");
-      const classifierUI = document.getElementById("classifier-ui");
-      const webcamContainer = document.getElementById("webcam-container");
-      let mode = "marker"; // default
-
-      toggleBtn.addEventListener("click", async () => {
-        if (mode === "marker") {
-          // Switch to classifier
-          mode = "classifier";
-          arScene.style.display = "none";
-          classifierUI.style.display = "block";
-          webcamContainer.style.display = "block";
-          toggleBtn.textContent = "Switch to Marker Mode";
-          if (!model) await initClassifier();
-        } else {
-          // Switch back to marker
-          mode = "marker";
-          arScene.style.display = "block";
-          classifierUI.style.display = "none";
-          webcamContainer.style.display = "none";
-          toggleBtn.textContent = "Switch to Classifier Mode";
-          if (webcam) {
-            webcam.stop();
-            webcam = null;
-          }
-        }
-      });
+      initClassifier();
     </script>
   </body>
 </html>
-
